@@ -1,15 +1,45 @@
 source config.bash
 
-IMPORT_PREPARED_DATASET_CYPHER="
-    LOAD CSV WITH HEADERS FROM 'file:///prepared-dataset.csv' AS row
-    MERGE (n:${MAIN_NODE_LABEL} {id: row.${MAIN_NODE_ID_COLUMN}, name: row.${MAIN_NODE_NAME_COLUMN}})
-    MERGE (m:${ITEM_NODE_LABEL} {id: row.${ITEM_NODE_ID_COLUMN}, name: row.${ITEM_NODE_NAME_COLUMN}})
-    MERGE (n)-[:${RELATIONSHIP_TYPE}]->(m);
+CREATE_INDEX_CYPHER="
+    CREATE INDEX ${MAIN_NODE_LABEL}_id FOR (n:${MAIN_NODE_LABEL}) ON (n.id);
+    CREATE INDEX ${ITEM_NODE_LABEL}_id FOR (m:${ITEM_NODE_LABEL}) ON (m.id);
 "
+
+PREPARED_DATASET_MAIN_NODES_DOCKER_FILENAME="prepared-dataset-main-nodes.csv"
+PREPARED_DATASET_ITEM_NODES_DOCKER_FILENAME="prepared-dataset-item-nodes.csv"
+PREPARED_DATASET_RELATIONSHIPS_DOCKER_FILENAME="prepared-dataset-relationships.csv"
+
+IMPORT_MAIN_NODES_CYPHER="
+    LOAD CSV WITH HEADERS FROM 'file:///${PREPARED_DATASET_MAIN_NODES_DOCKER_FILENAME}' AS row
+    CREATE (n:${MAIN_NODE_LABEL} {id: row.${MAIN_NODE_ID_COLUMN}, name: row.${MAIN_NODE_NAME_COLUMN}});
+"
+
+IMPORT_ITEM_NODES_CYPHER="
+    LOAD CSV WITH HEADERS FROM 'file:///${PREPARED_DATASET_ITEM_NODES_DOCKER_FILENAME}' AS row
+    CREATE (m:${ITEM_NODE_LABEL} {id: row.${ITEM_NODE_ID_COLUMN}, name: row.${ITEM_NODE_NAME_COLUMN}});
+"
+
+IMPORT_RELATIONSHIPS_CYPHER="
+    LOAD CSV WITH HEADERS FROM 'file:///${PREPARED_DATASET_RELATIONSHIPS_DOCKER_FILENAME}' AS row
+    MATCH (n:${MAIN_NODE_LABEL} {id: row.${MAIN_NODE_ID_COLUMN}})
+    MATCH (m:${ITEM_NODE_LABEL} {id: row.${ITEM_NODE_ID_COLUMN}})
+    CREATE (n)-[:${RELATIONSHIP_TYPE}]->(m);
+"
+
+function import-prepared-dataset {
+    PREPARED_DATASET_HOST_PATH="$1"
+    PREPARED_DATASET_DOCKER_FILENAME="$2"
+    IMPORT_CYPHER="$3"
+    echo "Importing prepared dataset ${PREPARED_DATASET_HOST_PATH} into Neo4j database ${NEO4J_DOCKER_NAME}..."
+    docker cp ${PREPARED_DATASET_HOST_PATH} ${NEO4J_DOCKER_NAME}:/var/lib/neo4j/import/${PREPARED_DATASET_DOCKER_FILENAME}
+    docker exec ${NEO4J_DOCKER_NAME} cypher-shell --user neo4j --password ${NEO4J_PASSWORD} "${IMPORT_CYPHER}"
+    echo "Done importing prepared dataset ${PREPARED_DATASET_HOST_PATH} into Neo4j database ${NEO4J_DOCKER_NAME}!"
+}
 
 set -e
 
-echo "Importing prepared dataset ${PREPARED_DATASET_PATH} into Neo4j database ${NEO4J_DOCKER_NAME}..."
-docker cp ${PREPARED_DATASET_PATH} ${NEO4J_DOCKER_NAME}:/var/lib/neo4j/import/prepared-dataset.csv
-docker exec ${NEO4J_DOCKER_NAME} cypher-shell --user neo4j --password ${NEO4J_PASSWORD} "${IMPORT_PREPARED_DATASET_CYPHER}"
-echo "Done importing prepared dataset ${PREPARED_DATASET_PATH} into Neo4j database ${NEO4J_DOCKER_NAME}!"
+docker exec ${NEO4J_DOCKER_NAME} cypher-shell --user neo4j --password ${NEO4J_PASSWORD} "${CREATE_INDEX_CYPHER}"
+
+import-prepared-dataset "${PREPARED_DATASET_MAIN_NODE_PATH}" "${PREPARED_DATASET_MAIN_NODES_DOCKER_FILENAME}" "${IMPORT_MAIN_NODES_CYPHER}"
+import-prepared-dataset "${PREPARED_DATASET_ITEM_NODE_PATH}" "${PREPARED_DATASET_ITEM_NODES_DOCKER_FILENAME}" "${IMPORT_ITEM_NODES_CYPHER}"
+import-prepared-dataset "${PREPARED_DATASET_RELATIONSHIP_PATH}" "${PREPARED_DATASET_RELATIONSHIPS_DOCKER_FILENAME}" "${IMPORT_RELATIONSHIPS_CYPHER}"

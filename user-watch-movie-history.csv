@@ -1,18 +1,18 @@
-UserId,UserName,MovieId,MovieName
-5566,Alice,1234,Toy Story
-5566,Alice,1235,Toy Story 2
-5566,Alice,1236,Toy Story 3
-5566,Alice,1237,Toy Story 4
-5567,Bob,1234,Toy Story
-5567,Bob,1235,Toy Story 2
-5567,Bob,1236,Toy Story 3
-5568,Carol,2345,The Terminator
-5568,Carol,2346,The Terminator 2
-5568,Carol,2347,The Terminator 3
-5568,Carol,2348,The Terminator 4
-5568,Carol,2349,The Terminator 5
-5569,David,2345,The Terminator
-5569,David,2346,The Terminator 2
-5569,David,2347,The Terminator 3
-5569,David,2348,The Terminator 4
-7788,Frank,1234,Toy Story
+UserId,MovieId
+5566,1234
+5566,1235
+5566,1236
+5566,1237
+5567,1234
+5567,1235
+5567,1236
+5568,2345
+5568,2346
+5568,2347
+5568,2348
+5568,2349
+5569,2345
+5569,2346
+5569,2347
+5569,2348
+7788,1234
